@@ -1,5 +1,4 @@
-# Dummy Schema (for Tiny SQL Expert)
-
+# Dummy Schema 
 This project uses a small dummy schema with 3 related tables that require JOINs to answer cross-table questions.
 
 ## Users
@@ -17,4 +16,5 @@ This project uses a small dummy schema with 3 related tables that require JOINs 
 ## Products
 - product_id: INTEGER PRIMARY KEY
 - name: TEXT
+
 - price: DECIMAL

@@ -1,4 +1,4 @@
-#🌟 Tiny SQL Expert — English to SQL using Small Language Models (<4B)
+🌟 Tiny SQL Expert — English to SQL using Small Language Models (<4B)
 
 This project is my submission for:
 

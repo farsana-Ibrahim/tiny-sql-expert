@@ -1,5 +1,5 @@
 transformers>=4.30.0
-torch>=1.12.0          # or appropriate version for your environment (CPU/GPU)
+torch>=1.12.0          
 sqlparse>=0.4.4
-sentencepiece>=0.1.97  # if model uses it
+sentencepiece>=0.1.97 
 accelerate>=0.18.0

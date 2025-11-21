@@ -1,36 +1,20 @@
-#!/usr/bin/env python3
-"""
-Tiny SQL Expert - Option 3 (Full script)
-- Uses a small HF model (<4B by default) to translate English -> SQL
-- Implements a validation + self-correction (retry) loop
-- Prints only raw SQL to STDOUT (all logs go to STDERR)
-"""
-
 import argparse
 import os
 import sys
 import time
 import re
 from typing import List, Tuple
-
-# NLP/model
 from transformers import pipeline, set_seed
-
-# SQL parsing/validation
 import sqlparse
 
-# ---------- Configuration: default model (changeable) ----------
 DEFAULT_MODEL = os.environ.get("TINY_SQL_MODEL", "bigscience/bloom-3b")
-# Note: bloom-3b is ~3B params. You may substitute any <4B model available locally/HF.
 
-# ---------- Schema definition (you should also include schema.md in repo) ----------
 SCHEMA = {
     "Users": ["user_id", "name", "email"],
     "Orders": ["order_id", "user_id", "product_id", "quantity", "order_date"],
     "Products": ["product_id", "name", "price"]
 }
 
-# All allowed table names (lowercase for comparison)
 ALLOWED_TABLES = {t.lower() for t in SCHEMA.keys()}
 
 # Forbidden SQL keywords
@@ -82,10 +66,9 @@ ERROR_HINT:
 {error_hint}
 """
 
-# When first calling model, previous_sql and error_hint will be empty strings.
 
 
-# ---------- Helper: logging to stderr so stdout remains pure SQL ----------
+# ---------- logging to stderr so stdout remains pure SQL ----------
 def log(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
@@ -104,7 +87,7 @@ def parentheses_match(s: str) -> bool:
     return not stack
 
 def quotes_match(s: str) -> bool:
-    # simple approach: counts of single and double quotes must be even
+    # counts of single and double quotes must be even
     return s.count("'") % 2 == 0 and s.count('"') % 2 == 0
 
 def contains_forbidden(sql: str) -> List[str]:
@@ -154,10 +137,10 @@ def validate_sql(sql: str) -> Tuple[bool, List[str]]:
         errors.append("Empty SQL.")
         return False, errors
 
-    # single-statement guard: avoid multiple semicolons that could indicate multiple statements
+    # avoid multiple semicolons that could indicate multiple statements
     if trimmed.count(";") > 1:
         errors.append("Multiple statements detected (more than 1 semicolon).")
-    # Require final semicolon (not strict but helpful)
+    # Require final semicolon
     if not trimmed.endswith(";"):
         errors.append("SQL should end with a semicolon ';'.")
 
@@ -176,7 +159,6 @@ def validate_sql(sql: str) -> Tuple[bool, List[str]]:
     if not known:
         errors.append("No known schema tables referenced (Users, Orders, Products).")
     else:
-        # If query references only one table and asked for joins perhaps it's ok; we allow single-table selects.
         pass
 
     if not basic_sqlparse_ok(trimmed):
@@ -246,8 +228,7 @@ def run(question: str, model_name: str, max_retries: int = 3, temperature: float
         except Exception as e:
             log("Model generation failed:", e)
             candidate = ""
-
-        # Heuristic: sometimes model echoes question, so try to extract first SQL-looking block
+            
         # Attempt to extract the first semicolon-terminated statement
         sql_match = re.search(r"(?s)(select\b.*?;)", candidate, flags=re.IGNORECASE)
         if sql_match:
@@ -258,7 +239,7 @@ def run(question: str, model_name: str, max_retries: int = 3, temperature: float
             if not candidate_sql.endswith(";"):
                 candidate_sql = candidate_sql + ";"
 
-        # 🛠 FIX: Convert to string to avoid "'tuple' has no attribute 'lower'" validation bug
+        #Convert to string to avoid "'tuple' has no attribute 'lower'" validation bug
         candidate_sql = str(candidate_sql)
 
         log("Candidate SQL (first 300 chars):")
@@ -284,9 +265,7 @@ def run(question: str, model_name: str, max_retries: int = 3, temperature: float
         # Use last candidate_sql even if invalid, but this is the best effort.
         final_sql = previous_sql or ""
 
-    # Final requirement: print ONLY the SQL query to STDOUT
-    # Ensure there's no leading/trailing whitespace or logs
-    # Sanitize to single SQL statement (first semicolon-terminated statement)
+    #print ONLY the SQL query to STDOUT
     final_match = re.search(r"(?s)(select\b.*?;)", final_sql, flags=re.IGNORECASE)
     if final_match:
         output_sql = final_match.group(1).strip()
@@ -296,9 +275,9 @@ def run(question: str, model_name: str, max_retries: int = 3, temperature: float
         if output_sql and not output_sql.endswith(";"):
             output_sql += ";"
 
-    # Print final SQL to stdout (pure)
+    # Print final SQL 
     print(output_sql)
-    # Additionally provide a final status log to stderr
+    # provide a final status log to stderr
     log("\n=== Summary ===")
     log("Question:", question)
     log("Model:", model_name)
@@ -323,4 +302,5 @@ if __name__ == "__main__":
         run(args.question, model_name=args.model, max_retries=args.retries, temperature=args.temp)
     except Exception as ex:
         log("Fatal error:", ex)
+
         sys.exit(1)
